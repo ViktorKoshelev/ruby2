@@ -2,7 +2,10 @@ require_relative 'company.rb'
 
 # base module for interaction with user
 module UserInteraction
-  @company = Company.new
+  class << self
+    attr_accessor :company
+  end
+  @company = Company.new('./lib/subscribers.csv')
 
   def self.main_menu
     print_menu_actions
@@ -19,7 +22,7 @@ module UserInteraction
     puts '[6] Show subscribers by tarif'
     puts '[7] Exit'
   end
-  
+
   def self.choose_action(action)
     exit if action.nil?
     case action.to_i
@@ -47,46 +50,43 @@ module UserInteraction
   def self.input_action
     $stdin.gets
   end
-  
+
   def self.add_subscriber
     subscriber = read_full_name
-    
-    subscriber['tarif'] = read_tarif()
+
+    subscriber['tarif'] = read_tarif
     number = @company.add_subscriber(subscriber)
     puts "Your number is #{number}" if number
-    
   end
-  
+
   def self.read_full_name
-    subscriber = Hash.new
-    subscriber['firstName'] = read_string('Enter first name')
-    subscriber['lastName'] = read_string('Enter last name')
-    return subscriber
+    subscriber = {}
+    subscriber['firstName'] = read_string('Enter first name').delete_suffix("\n")
+    subscriber['lastName'] = read_string('Enter last name').delete_suffix("\n")
+    subscriber
   end
-  
+
   def self.read_string(message)
     puts message
     input_action
   end
-  
-  def self.read_tarif()
-    show_tarifs()
+
+  def self.read_tarif
+    show_tarifs
     action = input_action.to_i
-    if (action == 1 || action == 2 || action == 3)
-      return action;
-    else 
-      puts 'Error!'
-      puts 'Wrong tarif!'
-      return read_tarif()
-    end
+    return action if [1, 2, 3].include?(action)
+
+    puts 'Error!'
+    puts 'Wrong tarif!'
+    read_tarif
   end
-  
-  def self.show_tarifs()
+
+  def self.show_tarifs
     puts '[1] No limit'
     puts '[2] Combined'
     puts '[3] By time'
   end
-  
+
   def self.delete_subscriber
     subscriber = read_full_name
     if @company.find_subscriber_by_name(subscriber)
@@ -95,69 +95,72 @@ module UserInteraction
       puts 'Error! Subscriber not found!'
     end
   end
-  
+
   def self.find_subscriber
-    show_variants()
+    show_variants
     action = input_action.to_i
-    if (action == 1 || action == 2)
+    if [1, 2].include?(action)
       return find_by_name if action == 1
       return find_by_number if action == 2
-    else 
+    else
       puts 'Error!'
-      puts 'Wrong tarif!'
-      return read_tarif()
+      puts 'Wrong option!'
+      return find_subscriber
     end
   end
-  
+
   def self.show_variants
     puts '[1] By name'
     puts '[2] By number'
   end
-  
+
   def self.find_by_name
     subscriber = read_full_name
-    puts @company.find_subscriber_by_name(subscriber)
+    subscribers = @company.find_subscriber_by_name(subscriber)
+    return puts subscribers if subscribers
+
+    puts 'No one found'
   end
-  
+
   def self.find_by_number
     number = read_number
     puts @company.find_subscriber_by_number(number)
   end
-  
-  def self.read_number()
+
+  def self.read_number
     puts 'Enter number ******'
-    Integer(input_action)
+    num = Integer(input_action)
+    Integer('as') if (num < 100_000) || (num > 999_999)
+    num
   rescue StandardError
     puts 'Please enter a number ******'
     read_number
   end
-  
+
   def self.show_subscribers
-    puts @company.get_subscribers
+    puts @company.all_subscribers
   end
-  
+
   def self.show_receipt
-    subscriber = read_number
-    if @company.find_subscriber_by_number(number)
-      minutes = read_minutes
-      puts @company.calc_receipt(number, minutes)
-    end
+    number = read_number
+    puts @company.calc_receipt(number, read_minutes) if
+      @company.find_subscriber_by_number(number)
   end
-  
-  def self.read_minutes()
+
+  def self.read_minutes
     puts 'Enter used minutes'
     mins = Integer(input_action)
     return mins if mins >= 0
+
     puts 'Used minutes can\'t be negative'
     read_minutes
   rescue StandardError
     puts 'Please enter a number, for example 100'
-    read_minutes  
+    read_minutes
   end
-  
+
   def self.show_subscribers_by_tarif
-    tarif = read_tarif()
+    tarif = read_tarif
     puts @company.get_subscribers_by_tarif(tarif)
   end
- 
 end
